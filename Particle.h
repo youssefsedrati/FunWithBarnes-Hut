@@ -3,26 +3,24 @@
 
 #include <malloc.h>
 
-// #define G 6.67e-11 // m^3.kg^-1.s^-2
-
+// Real particle or virtual particle (multipole, fx & fy are then not used)
 struct Particle
 {
   double m; // mass
   double x; // x coordinate in the plane
   double y; // y coordinate in the plane
 
-  double vx; // speed along x-axis
-  double vy; // speed along y-axis
+  double fx; // force along x-axis
+  double fy; // force along y-axis
 
-  double fx; // gravitationnal force exerted on the particle
-  double fy; // gravitationnal force exerted on the particle
+} 
+typedef Particle;
 
-} typedef Particle;
+// Init a particle of mass m, and position (x,y)
+void initParticle(Particle *p, double m, double x, double y);
 
-Particle *initParticle(double m, double x, double y, double vx, double vy);
-
-void freeParticle(Particle *p);
-
+// Apply the force of p1 on p2
+void PonP(Particle *p1, Particle *p2);
 
 
 #endif
