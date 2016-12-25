@@ -1,7 +1,7 @@
 #ifndef QUADTREE_H
 #define QUADTREE_H
 
-#include "Particle.h"
+#include "Multipole.h"
 #include "Cell.h"
 
 // Perfect complete 4-ary tree
@@ -22,8 +22,8 @@ struct Quadtree
 	Cell *cells;
 	
 	// there is one center of mass per vertex of the tree : (4^(height-1)-1)/3 
-	int nbCMs;
-	Particle *CMs;
+	int nbMultipoles;
+	Multipole *multipoles;
 
 	// Index of the first outer vertex of the tree : nbCMS - nbCells
 	int firstOuterCM;  
@@ -41,9 +41,9 @@ void freeQuadtree(Quadtree *qt);
 
 // Compute all the centers of mass of the specified quadtree recursively, 
 // starting by the lower level ones
-void computeCMs(Quadtree *qt);
+void computeMultipoles(Quadtree *qt);
 
 // Compute the gravitationnal force exerted on each particule of the quadtree
-void computeAllForces(Quadtree *qt);
+void computeForces(Quadtree *qt);
 
 #endif 

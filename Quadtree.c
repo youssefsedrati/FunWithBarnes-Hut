@@ -2,23 +2,14 @@
 #include "Quadtree.h"
 
 #include <math.h>
+#include <omp.h>
 
-#define DIST(x1, y1, x2, y2) sqrt((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2))
 #define FAR_FIELD_LIMIT 0.707
 
 // Private auxiliary functions prototypes
 
-// Returns the distance between the cell c and the center of mass cm
-double distance(Particle *cm, Cell *c);
-
 // Compute the centers of mass of the i-th vertex and its children
 void computeCMrec(Quadtree *qt, int cmNo);
-
-// Compute the gravitationnal force exerted on each particle of the
-// i-th cell by the j-th center of mass
-// l is width of the area approximated by the cm
-void computeForcesRec(Quadtree *qt, int cellNo, int cmNo, double l);
-
 
 // Public functions
 
@@ -35,9 +26,9 @@ void initQuadtree(Quadtree *qt, int height, int nbPartMin, int nbPartMax,
 	qt->yMax = yMax;
 	qt->nbCells = powl(4, height-1);
 	qt->cells = (Cell *) malloc(qt->nbCells * sizeof(Cell));
-	qt->nbCMs = (powl(4, height) - 1) / 3;
-	qt->CMs = (Particle *) malloc(qt->nbCMs * sizeof(Particle));
-	qt->firstOuterCM = qt->nbCMs - qt->nbCells; 
+	qt->nbMultipoles = (powl(4, height) - 1) / 3;
+	qt->multipoles = (Multipole *) malloc(qt->nbMultipoles * sizeof(Multipole));
+	qt->firstOuterCM = qt->nbMultipoles - qt->nbCells; 
 	
 	long dim = powl(2, height-1);
 	double dX = (xMax - xMin) / (double)dim;
@@ -61,65 +52,70 @@ void freeQuadtree(Quadtree *qt)
 	for (int i = 0; i < qt->nbCells; i++)
 		freeCell(qt->cells + i);
 	free(qt->cells);
-	free(qt->CMs);
+	free(qt->multipoles);
 }
 
 
 // Compute all the centers of mass of the specified quadtree recursively, 
 // starting by the lower level ones
-void computeCMs(Quadtree *qt)
+void computeMultipoles(Quadtree *qt)
 {
 	computeCMrec(qt, 0);
 }
 
-// Compute the gravitational force exerted on each particle of the i-th cell
-void computeForces(Quadtree *qt, int cellNo)
-{
-	computeForcesRec(qt, cellNo, 0, qt->xMax - qt->xMin);
-}
-
 // Compute the gravitationnal force exerted on each particule of the quadtree
-void computeAllForces(Quadtree *qt)
+// Note: we consider that a center of mass is in the far field of a cell
+// if d/l > 0.707    where d is the distance between the cm and the cell
+// and w is the width of the area approximated by the cm
+void computeForces(Quadtree *qt)
 {
-	for (int i = 0; i < qt->nbCells; i++)
-		computeForces(qt, i);
+	#pragma omp parallel
+	{
+		WorkingVecs wv;
+		initWorkingVecs(&wv);
+
+		#pragma omp for schedule(dynamic, 1)
+		for (int cellNo = 0; cellNo < qt->nbCells; cellNo++)
+		{
+			int queue[qt->nbMultipoles];
+			int head = 0, tail = 0;
+			queue[tail++] = 0;
+
+			int cmNo;
+			double d, l;
+			while (head < tail)
+			{
+				cmNo = queue[head++];
+
+				d = distance(qt->multipoles + cmNo, qt->cells + cellNo); 
+				l = qt->multipoles[cmNo].xMax - qt->multipoles[cmNo].xMin;
+
+				if (d > l / FAR_FIELD_LIMIT)
+				{
+					M2P(qt->multipoles + cmNo, qt->cells + cellNo, &wv);
+				}
+				else if (cmNo < qt->firstOuterCM)
+				{
+					queue[tail++] = 4*cmNo+1;
+					queue[tail++] = 4*cmNo+2;
+					queue[tail++] = 4*cmNo+3;
+					queue[tail++] = 4*cmNo+4;
+				}
+				else if (cmNo != qt->firstOuterCM + cellNo)
+				{
+					P2P_ext(qt->cells + (cmNo - qt->firstOuterCM), qt->cells + cellNo, &wv);
+				}
+			}
+			P2P_in(qt->cells + cellNo, &wv);
+		}
+		
+		freeWorkingVecs(&wv);
+	}
 }
 
 
 // Private auxiliary functions
 
-double distance(Particle *cm, Cell *c)
-{
-	double d = 0;
-
-	if (cm->x < c->xMin)
-	{
-		if (cm->y < c->yMin)
-			d = DIST(c->xMin, c->yMin, cm->x, cm->y);
-		else if (cm->y > c->yMax)
-			d = DIST(c->xMin, c->yMax, cm->x, cm->y);
-		else
-			d = c->xMin - cm->x;
-	}
-	else if (cm->x > c->xMax)
-	{
-		if (cm->y < c->yMin)
-			d = DIST(c->xMax, c->yMin, cm->x, cm->y);
-		else if (cm->y > c->yMax)
-			d = DIST(c->xMax, c->yMax, cm->x, cm->y);
-		else
-			d = cm->x - c->xMax;
-	}
-	else
-	{
-		if (cm->y < c->yMin)
-			d = c->yMin - cm->y;
-		else if (cm->y > c->yMax)
-			d = cm->y - c->yMax;
-	}
-
-	return d;
-}
 
 void computeCMrec(Quadtree *qt, int cmNo)
 {
@@ -129,43 +125,10 @@ void computeCMrec(Quadtree *qt, int cmNo)
 		computeCMrec(qt, 4*cmNo+2);
 		computeCMrec(qt, 4*cmNo+3);
 		computeCMrec(qt, 4*cmNo+4);
-		M2M(qt->CMs + cmNo, qt->CMs + 4*cmNo+1);
+		M2M(qt->multipoles + cmNo, 4, qt->multipoles + 4*cmNo+1);
 	}
 	else
 	{
-		P2M(qt->CMs + cmNo, qt->cells + (cmNo - qt->firstOuterCM));
+		P2M(qt->multipoles + cmNo, qt->cells + (cmNo - qt->firstOuterCM));
 	}
 }
-
-void computeForcesRec(Quadtree *qt, int cellNo, int cmNo, double l)
-{
-	// We consider that a center of mass is in the far field of a cell
-	// if d/w > 0.707
-	// where d is the distance between the cm and the cell
-	// and w is the width of the area approximated by the cm
-	double d = distance(qt->CMs + cmNo, qt->cells + cellNo); 
-
-	if (d > l / FAR_FIELD_LIMIT)
-	{
-		// printf("M2P from cm %d (width = %e, distance %e) on cell %d\n", cmNo, l, d, cellNo);
-		M2P(qt->CMs + cmNo, qt->cells + cellNo);
-	}
-	else if (cmNo < qt->firstOuterCM)
-	{
-		computeForcesRec(qt, cellNo, 4*cmNo+1, l/2);
-		computeForcesRec(qt, cellNo, 4*cmNo+2, l/2);
-		computeForcesRec(qt, cellNo, 4*cmNo+3, l/2);
-		computeForcesRec(qt, cellNo, 4*cmNo+4, l/2);
-	}
-	else if (cmNo == qt->firstOuterCM + cellNo)
-	{
-		// printf("P2P_in on cell %d\n", cellNo);
-		P2P_in(qt->cells + cellNo);
-	}
-	else
-	{
-		// printf("P2P_ext from cell %d on cell %d\n", cmNo - qt->firstOuterCM, cellNo);
-		P2P_ext(qt->cells + (cmNo - qt->firstOuterCM), qt->cells + cellNo);
-	}
-}
-
