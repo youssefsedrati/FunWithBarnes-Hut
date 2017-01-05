@@ -47,7 +47,7 @@ int main(int argc, char const *argv[])
 
 	srand(42);
 	initQuadtree(&qt, height, nbParticles, nbParticles, 1e30, 1e32, 0, 1e17, 0, 1e17);
-	MPI_Barrier();
+	MPI_Barrier(MPI_COMM_WORLD);
 
 	if (rank == 0)
 	{
@@ -57,7 +57,7 @@ int main(int argc, char const *argv[])
 	}
 
 	computeMultipoles(&qt);
-	MPI_Barrier();
+	MPI_Barrier(MPI_COMM_WORLD);
 
 	if (rank == 0)
 	{
