@@ -13,5 +13,5 @@ make
 
 for N in 200000 400000 800000 1600000
 do
-	MKL_NUM_THREADS=20 mpiexec -np 8 --bind-to none ./benchDistributed ${N} 5
+	MKL_NUM_THREADS=20 mpiexec -np 8 --bind-to none ./benchDistributed ${N} 6
 done
