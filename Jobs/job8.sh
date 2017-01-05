@@ -11,7 +11,7 @@ module load intel/mkl/64/11.2/2016.0.0 intel-tbb-oss/intel64/43_20150424oss mpi/
 cd FunWithBarnes-Hut
 make
 
-for N in 200000 400000 800000
+for N in 200000 400000 800000 1600000
 do
-	MKL_NUM_THREADS=20 mpiexec -np 8 --bind-to none ./benchDistributed ${N} 4
+	MKL_NUM_THREADS=20 mpiexec -np 8 --bind-to none ./benchDistributed ${N} 5
 done
