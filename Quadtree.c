@@ -2,14 +2,12 @@
 #include "Quadtree.h"
 
 #include <math.h>
+#include <mpi.h>
 #include <omp.h>
-
-#define FAR_FIELD_LIMIT 0.707
-
 // Private auxiliary functions prototypes
 
 // Compute the centers of mass of the i-th vertex and its children
-void computeCMrec(Quadtree *qt, int cmNo);
+static void computeCMrec(Quadtree *qt, int cmNo);
 
 // Public functions
 
@@ -65,9 +63,9 @@ void computeMultipoles(Quadtree *qt)
 
 // Compute the gravitationnal force exerted on each particule of the quadtree
 // Note: we consider that a center of mass is in the far field of a cell
-// if d/l > 0.707    where d is the distance between the cm and the cell
+// if d/l > farFieldLimit    where d is the distance between the cm and the cell
 // and w is the width of the area approximated by the cm
-void computeForces(Quadtree *qt)
+void computeForces(Quadtree *qt, double farFieldLimit)
 {
 	#pragma omp parallel
 	{
@@ -90,7 +88,7 @@ void computeForces(Quadtree *qt)
 				d = distance(qt->multipoles + cmNo, qt->cells + cellNo); 
 				l = qt->multipoles[cmNo].xMax - qt->multipoles[cmNo].xMin;
 
-				if (d > l / FAR_FIELD_LIMIT)
+				if (d > l / farFieldLimit)
 				{
 					M2P(qt->multipoles + cmNo, qt->cells + cellNo, &wv);
 				}
@@ -113,6 +111,61 @@ void computeForces(Quadtree *qt)
 	}
 }
 
+// Compute the gravitationnal force exerted on each particule of the quadtree
+// Note: we consider that a center of mass is in the far field of a cell
+// if d/l > farFieldLimit    where d is the distance between the cm and the cell
+// and w is the width of the area approximated by the cm
+void computeForcesDistributed(Quadtree *qt, double farFieldLimit)
+{
+	int rank, size;
+	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+	MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+	int nbCellsPerNode = qt->nbCells / size;
+
+	#pragma omp parallel
+	{
+		WorkingVecs wv;
+		initWorkingVecs(&wv);
+
+		#pragma omp for schedule(dynamic, 1)
+		for (int cellNo = rank*nbCellsPerNode; cellNo < (rank+1 * nbCellsPerNode); cellNo++)
+		{
+			int queue[qt->nbMultipoles];
+			int head = 0, tail = 0;
+			queue[tail++] = 0;
+
+			int cmNo;
+			double d, l;
+			while (head < tail)
+			{
+				cmNo = queue[head++];
+
+				d = distance(qt->multipoles + cmNo, qt->cells + cellNo); 
+				l = qt->multipoles[cmNo].xMax - qt->multipoles[cmNo].xMin;
+
+				if (d > l / farFieldLimit)
+				{
+					M2P(qt->multipoles + cmNo, qt->cells + cellNo, &wv);
+				}
+				else if (cmNo < qt->firstOuterCM)
+				{
+					queue[tail++] = 4*cmNo+1;
+					queue[tail++] = 4*cmNo+2;
+					queue[tail++] = 4*cmNo+3;
+					queue[tail++] = 4*cmNo+4;
+				}
+				else if (cmNo != qt->firstOuterCM + cellNo)
+				{
+					P2P_ext(qt->cells + (cmNo - qt->firstOuterCM), qt->cells + cellNo, &wv);
+				}
+			}
+			P2P_in(qt->cells + cellNo, &wv);
+		}
+		
+		freeWorkingVecs(&wv);
+	}
+}
 
 // Private auxiliary functions
 

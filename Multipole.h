@@ -19,8 +19,8 @@ struct Multipole
 typedef Multipole;
 
 // Initialize a multipole
-void initMultipole(Multipole *mp, double m, double x, double y, 
-				   double xMin, double xMax, double yMin, double yMax);
+extern void initMultipole(Multipole *mp, double m, double x, double y, 
+						  double xMin, double xMax, double yMin, double yMax);
 
 
 #endif

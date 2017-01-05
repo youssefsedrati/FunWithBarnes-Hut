@@ -4,6 +4,8 @@
 #if defined __BMI2__
 
 // requires Haswell or better, compile with -mbmi2
+#include <immintrin.h>
+
 uint64_t xy_to_morton(uint32_t x, uint32_t y)
 {
   return _pdep_u32(x, 0x55555555) | _pdep_u32(y,0xaaaaaaaa);
@@ -15,7 +17,7 @@ uint64_t xy_to_morton(uint32_t x, uint32_t y)
 
 #include <wmmintrin.h>
 
-uint64_t carryless_square(uint32_t x)
+static uint64_t carryless_square(uint32_t x)
 {
   uint64_t val[2] = {x, 0};
   __m128i *a = (__m128i * )val;

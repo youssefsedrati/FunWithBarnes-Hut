@@ -1,4 +1,5 @@
 #include "Cell.h"
+#include "utils.h"
 
 #include <float.h>
 #include <malloc.h>
@@ -7,11 +8,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+
 #define G 6.67e-11 // m^3.kg^-1.s^-2
-#define MIN(x, y) (x < y ? x : y)
-#define MAX(x, y) (x > y ? x : y)
-#define DIST(x1, y1, x2, y2) sqrt((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2))
-#define RAND_DOUBLE(minVal, maxVal) ((rand()/(float)(RAND_MAX)) * (maxVal - minVal) + minVal)
 
 
 // Initialize a cell with a random number of particles between
@@ -20,7 +18,7 @@
 void initCell(Cell *c, int nbParticlesMin, int nbParticlesMax, double mMin, double mMax, double xMin, double xMax, double yMin, double yMax)
 {
 	c->xMin = xMin; c->xMax = xMax; c->yMin = yMin; c->yMax = yMax;
-	c->nbParticles = RAND_DOUBLE(nbParticlesMin, nbParticlesMax);
+	c->nbParticles = randDouble(nbParticlesMin, nbParticlesMax);
 	c->m = (double *) malloc(5 * c->nbParticles * sizeof(double));
 	c->x = c->m + c->nbParticles;
 	c->y = c->x + c->nbParticles;
@@ -29,9 +27,9 @@ void initCell(Cell *c, int nbParticlesMin, int nbParticlesMax, double mMin, doub
 
 	for (int i = 0; i < c->nbParticles; i++)
 	{
-		c->m[i] = RAND_DOUBLE(mMin, mMax);
-		c->x[i] = RAND_DOUBLE(xMin, xMax);
-		c->y[i] = RAND_DOUBLE(yMin, yMax);
+		c->m[i] = randDouble(mMin, mMax);
+		c->x[i] = randDouble(xMin, xMax);
+		c->y[i] = randDouble(yMin, yMax);
 		c->fx[i] = 0;
 		c->fy[i] = 0;
 	}
@@ -47,10 +45,10 @@ void mergeCell(Cell *cMerged, int nbCells, Cell *cells)
 	for (int i = 0; i < nbCells; i++)
 	{
 		cMerged->nbParticles += cells[i].nbParticles;
-		cMerged->xMin = MIN(cells[i].xMin, cMerged->xMin); 
-		cMerged->xMax = MAX(cells[i].xMax, cMerged->xMax); 
-		cMerged->yMin = MIN(cells[i].yMin, cMerged->yMin); 
-		cMerged->yMax = MAX(cells[i].yMax, cMerged->yMax); 
+		cMerged->xMin = min(cells[i].xMin, cMerged->xMin); 
+		cMerged->xMax = max(cells[i].xMax, cMerged->xMax); 
+		cMerged->yMin = min(cells[i].yMin, cMerged->yMin); 
+		cMerged->yMax = max(cells[i].yMax, cMerged->yMax); 
 	}
 
 	cMerged->m = (double *) malloc(5 * cMerged->nbParticles * sizeof(double));
@@ -85,18 +83,18 @@ double distance(Multipole *m, Cell *c)
   if (m->x < c->xMin)
   {
     if (m->y < c->yMin)
-      d = DIST(c->xMin, c->yMin, m->x, m->y);
+      d = dist(c->xMin, c->yMin, m->x, m->y);
     else if (m->y > c->yMax)
-      d = DIST(c->xMin, c->yMax, m->x, m->y);
+      d = dist(c->xMin, c->yMax, m->x, m->y);
     else
       d = c->xMin - m->x;
   }
   else if (m->x > c->xMax)
   {
     if (m->y < c->yMin)
-      d = DIST(c->xMax, c->yMin, m->x, m->y);
+      d = dist(c->xMax, c->yMin, m->x, m->y);
     else if (m->y > c->yMax)
-      d = DIST(c->xMax, c->yMax, m->x, m->y);
+      d = dist(c->xMax, c->yMax, m->x, m->y);
     else
       d = m->x - c->xMax;
   }
@@ -258,10 +256,10 @@ void M2M(Multipole *m, int nbSms, Multipole *sms)
 		m->m += sms[i].m;
 		m->x += sms[i].m * sms[i].x;
 		m->y += sms[i].m * sms[i].y;
-		m->xMin = MIN(m->xMin, sms[i].xMin);
-		m->xMax = MAX(m->xMax, sms[i].xMax);
-		m->yMin = MIN(m->yMin, sms[i].yMin);
-		m->yMax = MAX(m->yMax, sms[i].yMax);
+		m->xMin = min(m->xMin, sms[i].xMin);
+		m->xMax = max(m->xMax, sms[i].xMax);
+		m->yMin = min(m->yMin, sms[i].yMin);
+		m->yMax = max(m->yMax, sms[i].yMax);
 	}
 
 	m->x /= m->m;

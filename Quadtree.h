@@ -33,17 +33,26 @@ typedef Quadtree;
 // Initialise the cells of a quadtree of specified height, built on the 2D area [xMin, xMax]*[yMin, yMax]
 // containing a total of particles picked randomly in [[nbPartMin, nbPartMax]], 
 // with masses picked randomly in [[mMin, mMax]]   
-void initQuadtree(Quadtree *qt, int height, int nbPartMin, int nbPartMax, 
-				  double mMin, double mMax, double xMin, double xMax, double yMin, double yMax);
+extern void initQuadtree(Quadtree *qt, int height, int nbPartMin, int nbPartMax, 
+						 double mMin, double mMax, double xMin, double xMax, double yMin, double yMax);
 
 // Release the ressources associated with the specified quadtree
-void freeQuadtree(Quadtree *qt);
+extern void freeQuadtree(Quadtree *qt);
 
 // Compute all the centers of mass of the specified quadtree recursively, 
 // starting by the lower level ones
-void computeMultipoles(Quadtree *qt);
+extern void computeMultipoles(Quadtree *qt);
 
 // Compute the gravitationnal force exerted on each particule of the quadtree
-void computeForces(Quadtree *qt);
+// Note: we consider that a center of mass is in the far field of a cell
+// if d/l > farFieldLimit    where d is the distance between the cm and the cell
+// and w is the width of the area approximated by the cm
+extern void computeForces(Quadtree *qt, double farFieldLimit);
+
+// Compute the gravitationnal force exerted on each particule of the quadtree
+// Note: we consider that a center of mass is in the far field of a cell
+// if d/l > farFieldLimit    where d is the distance between the cm and the cell
+// and w is the width of the area approximated by the cm
+extern void computeForcesDistributed(Quadtree *qt, double farFieldLimit);
 
 #endif 

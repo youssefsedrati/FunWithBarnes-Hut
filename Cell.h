@@ -25,17 +25,17 @@ typedef struct Cell
 // Initialize a cell with a random number of particles between
 // nbParticlesMin and nbParticlesMax, of random mass between mMin and mMax, and random 
 // positions (x,y) with x between xMin and xMax and y between yMin and yMax
-void initCell(Cell *c, int nbParticlesMin, int nbParticlesMax, double mMin, double mMax, 
-			  double xMin, double xMax, double yMin, double yMax);
+extern void initCell(Cell *c, int nbParticlesMin, int nbParticlesMax, double mMin, double mMax, 
+					 double xMin, double xMax, double yMin, double yMax);
 
 // Merge cells in cMerged
-void mergeCell(Cell *cMerged, int nbCells, Cell *cells);
+extern void mergeCell(Cell *cMerged, int nbCells, Cell *cells);
 
 // Release ressources associated with the cell c
-void freeCell(Cell *c);
+extern void freeCell(Cell *c);
 
 // Returns the distance between the bounding box of a multipole and a cell
-double distance(Multipole *m, Cell *c);
+extern double distance(Multipole *m, Cell *c);
 
 
 // Compute the respective forces (fx[i], fy[i]) exerted by a particle of mass mC in (xC, yC) 
@@ -49,34 +49,34 @@ double distance(Multipole *m, Cell *c);
 // i.e projected on x axis : - ((xI-xC) / sqrt(dI)) * F = - G * mC * (xI-xC) * mi / dI^(3/2)
 // and projected on y axis : - ((yI-yC) / sqrt(dI)) * F = - G * mC * (yI-yC) * mi / dI^(3/2)
 // 
-void ponP(double mC, double xC, double yC, double nbParticles, double *m, double *x, 
-		  double *y, double *fx, double *fy, WorkingVecs *wv);
+extern void ponP(double mC, double xC, double yC, double nbParticles, double *m, double *x, 
+				 double *y, double *fx, double *fy, WorkingVecs *wv);
 
 // Same as pOnP, but naive version for regression tests 
-void ponP_ref(double mC, double xC, double yC, double nbParticles, double *m, 
-			  double *x, double *y, double *fx, double *fy);
+extern void ponP_ref(double mC, double xC, double yC, double nbParticles, double *m, 
+					 double *x, double *y, double *fx, double *fy);
 
 // Apply the forces of the particles in c on each other
-void P2P_in(Cell *c, WorkingVecs *wv);
+extern void P2P_in(Cell *c, WorkingVecs *wv);
 
 // Same as P2P_in, but naive version for regression tests
-void P2P_inRef(Cell *c);
+extern void P2P_inRef(Cell *c);
 
 // Apply the forces of the particles in c1 on the particles in c2
-void P2P_ext(Cell *c1, Cell *c2, WorkingVecs *wv);
+extern void P2P_ext(Cell *c1, Cell *c2, WorkingVecs *wv);
 
 // Apply the forces of the particles in c1 on the particles in c2
 // naively (for regression test)
-void P2P_extRef(Cell *c1, Cell *c2);
+extern void P2P_extRef(Cell *c1, Cell *c2);
 
 // Approximate cell c by a multipole m
-void P2M(Multipole *m, Cell *c);
+extern void P2M(Multipole *m, Cell *c);
 
 // Apply the forces of a multipole m on particles in cell c
-void M2P(Multipole *m, Cell *c, WorkingVecs *wv);
+extern void M2P(Multipole *m, Cell *c, WorkingVecs *wv);
 
 // Approximate sub-multipoles sm by a multipole m
-void M2M(Multipole *m, int nbSms, Multipole *sms);
+extern void M2M(Multipole *m, int nbSms, Multipole *sms);
 
 
 #endif
